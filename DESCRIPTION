@@ -1,0 +1,12 @@
+Package: suquan
+Title: Supervised quantiled linear model
+Version: 0.1.0
+Authors@R: person("Jean-Philippe", "Vert", email = "jean-philippe.vert@mines.org", role = c("aut", "cre"))
+Description: This package implements a method for regression and supervised classification which involves a full quantile normalization of the data optimized for the task.
+Depends: R (>= 3.2.0), apg
+License: Artistic-2.0
+LazyData: true
+URL: https://github.com/jpvert/suquan
+BugReports: https://github.com/jpvert/suquan/issues
+Suggests: knitr, glmnet
+VignetteBuilder: knitr
