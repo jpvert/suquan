@@ -16,7 +16,7 @@ function, \code{b}, the linear model, \code{b0}, the intercept}
 A vector of predictions, for all samples.
 }
 \description{
-Make prediction on new samples with a quantiles linear model.
+Make prediction on new samples with a quantiled linear model.
 }
 \examples{
 n <- 100

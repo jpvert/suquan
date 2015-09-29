@@ -1,0 +1,80 @@
+---
+title: "Breast cancer prognosis"
+author: "Jean-Philippe Vert"
+date: "24 septembre 2015"
+output: html_document
+---
+
+We test the SUQUAN model on breast cancer prognosis from gene expression data.
+```{r}
+library(ROCR)
+library(glmnet)
+library(suquan)
+set.seed(1234)
+mc.cores <- 5
+
+# Download some data
+source("https://bioconductor.org/biocLite.R")
+biocLite("breastCancerTRANSBIG")
+library(breastCancerTRANSBIG)
+data(transbig)
+x <- t(exprs(transbig))
+
+# Label is 10-year metastasis
+thres <- 10*365
+clin <- pData(transbig)
+y <- numeric(nrow(x))
+y[clin$t.rfs > thres] <- 1
+y[(clin$t.rfs <= thres) & (clin$e.rfs)] <- -1
+
+# Keep only positive and negative examples
+x <- x[y!=0,]
+y <- y[y!=0]
+n <- nrow(x)
+p <- ncol(x)
+
+# Make train/test splits
+nrepeats <- 5
+nfolds <- 3
+folds <- list()
+for (i in seq(nrepeats)) {
+	folds <- c(folds,split(sample(seq(n)), rep(1:nfolds, length = n)))
+}
+nexp <- length(folds)
+
+lambda <- 5^{-10:2}
+nlambda <- length(lambda)
+niter <- 5
+
+# Main loop (done in parallel on several cores)
+auc <- mclapply(seq(nexp), function(iexp){
+    auc <- matrix(nrow=nlambda, ncol=niter)
+    itest <- folds[[iexp]]
+    itrain <- seq(n)[-itest]
+    for (iiter in seq(niter)) {
+        # iter is how many times we optimize the quantile distribution
+        
+        for (ilambda in seq(nlambda)) {
+            # lambda is the regularization parameter
+            
+            # Train SUQUAN on the training set
+            m <- suquan(x[itrain,],y[itrain], family="binomial",opts=list(alpha=0), lambda=lambda[ilambda], maxiter=iiter)
+            
+            # Predict on the test set
+            ypred <- predict.suquan(m,x[itest,])
+            
+            # Compute AUC on the test set
+            pred <- prediction(ypred, y[itest])
+            auc[ilambda, iiter] <- performance(pred, "auc")@y.values[[1]]
+        }
+    }
+    return(auc)
+},
+mc.cores=mc.cores)
+
+# Pretty plot
+mauc <- apply(array(unlist(auc), dim = c(nrow(auc[[1]]), ncol(auc[[1]]), length(auc))), c(1,2), mean)
+matplot(mauc, type="l", lty=1, lwd=2, ylab="AUC",xlab="log(lambda)")
+legend("bottomleft", legend=seq(niter), col=seq(niter), lty=1, lwd=2)
+```
+Unfortunately it does not seem to help to learn the quantile function in this case. Perhaps a "fausse bonne idée"?

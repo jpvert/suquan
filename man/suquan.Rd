@@ -5,7 +5,8 @@
 \title{Fit a supervised quantiled linear model.}
 \usage{
 suquan(x, y, family = c("gaussian", "binomial"), penalty = "elasticnet",
-  lambda = 1, intercept = TRUE, f_init = NULL, opts = list())
+  lambda = 1, intercept = TRUE, f_init = NULL, maxiter = 10,
+  eps = 1e-06, use.glmnet = TRUE, opts = list())
 }
 \arguments{
 \item{x}{The input matrix, each row is a sample, each column a feature.}
@@ -21,6 +22,21 @@ binary with values \code{+1} and \code{-1} for \code{family="binomial"}}
 
 \item{intercept}{Should intercept(s) be fitted (default=\code{TRUE}) or set
 to zero (\code{FALSE})}
+
+\item{f_init}{The initial distribution for the quantile transformation
+(default is a Gaussian cdf)}
+
+\item{maxiter}{Maximum number of times the optimization loop (once in the
+quantile distribution and once in the model) is performed (default
+\code{10})}
+
+\item{eps}{Stopping criterion: the loop will stop when the norm of the
+difference between the quantile distribution after two successive
+optimization is smaller than \code{eps} (default \code{1e-6})}
+
+\item{use.glmnet}{Whether the \code{glmnet} package should be used to fit the
+  model for a given quantile distribution. If \code{FALSE}, then the less
+  optimized \code{apg} optimizer is used (default \code{TRUE}).}
 
 \item{opts}{List of parameters, which must include: \itemize{ \item }}
 }

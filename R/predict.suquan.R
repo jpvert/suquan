@@ -22,7 +22,7 @@
 predict.suquan <- function(m, x) {
     
     rankx <- t(apply(x,1,rank))
-    matrix(m$b[rankx],nrow=n)%*%m$f + m$a0
+    matrix(m$b[rankx],nrow=nrow(x))%*%m$f + m$a0
     
 }
     

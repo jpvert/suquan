@@ -1,16 +1,28 @@
 #' Fit a supervised quantiled linear model.
 #' 
-#' Fit a generalized linear model via penalized maximum likelihood, with joint
+#' Fit a generalized linear model via penalized maximum likelihood, with joint 
 #' optimization of full quantile normalization.
 #' 
 #' @param x The input matrix, each row is a sample, each column a feature.
-#' @param y The response variable. Quantitative for \code{family="gaussian"},
+#' @param y The response variable. Quantitative for \code{family="gaussian"}, 
 #'   binary with values \code{+1} and \code{-1} for \code{family="binomial"}
 #' @param family The response type. For \code{family="gaussian"}, ...
 #' @param penalty The penalty type.
 #' @param lambda The scaling of the penalty (default \code{1})
-#' @param intercept Should intercept(s) be fitted (default=\code{TRUE}) or set
+#' @param intercept Should intercept(s) be fitted (default=\code{TRUE}) or set 
 #'   to zero (\code{FALSE})
+#' @param f_init The initial distribution for the quantile transformation 
+#'   (default is a Gaussian cdf)
+#' @param maxiter Maximum number of times the optimization loop (once in the 
+#'   quantile distribution and once in the model) is performed (default 
+#'   \code{10})
+#' @param eps Stopping criterion: the loop will stop when the norm of the 
+#'   difference between the quantile distribution after two successive 
+#'   optimization is smaller than \code{eps} (default \code{1e-6})
+#' @param use.glmnet Whether the \code{glmnet} package should be used to fit the
+#'   model for a given quantile distribution. If \code{FALSE}, then the less
+#'   optimized \code{apg} optimizer is used (default \code{TRUE}).
+#'   
 #' @param opts List of parameters, which must include: \itemize{ \item }
 #'   
 #' @return toto
@@ -24,12 +36,11 @@
 #' y <- rbinom(n,1,0.5)*2-1
 #' lambda <- 0.2*max(abs(crossprod(y,x)))/n
 #' m <- suquan(x, y, family="gaussian", penalty="elasticnet", opts=list(alpha=0))
-#' 
-suquan <- function(x, y, family=c("gaussian", "binomial"), penalty="elasticnet", lambda=1, intercept=TRUE, f_init = NULL, opts=list()) {
+
+suquan <- function(x, y, family=c("gaussian", "binomial"), penalty="elasticnet", lambda=1, intercept=TRUE, f_init = NULL, maxiter = 10, eps = 1e-6, use.glmnet=TRUE, opts=list()) {
     
-    MAXITER <- 100
-    EPS <- 1e-6
     p <- ncol(x)
+    n <- nrow(x)
     penalty <- match.arg(penalty)
 
     # Initiate the quantile function
@@ -48,22 +59,29 @@ suquan <- function(x, y, family=c("gaussian", "binomial"), penalty="elasticnet",
     orderx <- t(apply(rankx, 1, function(v) {match(seq(p),v)}))
     
     # Main loop
-    for (iter in seq(MAXITER)) {
+    for (iter in seq(maxiter)) {
         
         cat('iter ',iter,'\n')
         f_old <- f
 
         # Optimize model (b,a0) for a fixed quantile function f
         newx <- matrix(f[orderx],nrow=n)
-        m <- glm.apg(newx, y, family=family, penalty=penalty, intercept=intercept, lambda=lambda, opts=opts)
+        if (use.glmnet) {
+            mm <- glmnet(newx, y, family=family, intercept=intercept, standardize=FALSE, lambda=lambda, alpha=opts[["alpha"]])
+            m <- list(b=coef(mm)[-1,], a0=coef(mm)[1,])
+            
+        } else {
+            m <- glm.apg(newx, y, family=family, penalty=penalty, intercept=intercept, lambda=lambda, opts=opts)
+        }
 
         # Optimize quantile function f for fixed model b
-        newx <- matrix(m[["b"]][rankx],nrow=n)
-        m2 <- glm.apg(newx, y, family=family, penalty="boundednondecreasing", intercept=intercept, opts=opts)
+        if (iter < maxiter) {
+            newx <- matrix(m[["b"]][rankx],nrow=n)
+            m2 <- glm.apg(newx, y, family=family, penalty="boundednondecreasing", intercept=intercept, opts=opts)
+            f <- m2[["b"]]
+        }
         
-        f <- m2[["b"]]
-        
-        if (sqrt(sum((f-f_old)^2)) < EPS) break
+        if (sqrt(sum((f-f_old)^2)) < eps) break
     }
     
     return(list(f=f_old, b=m[["b"]], a0=m[["a0"]]))
