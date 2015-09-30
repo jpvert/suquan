@@ -11,7 +11,7 @@ library(ROCR)
 library(glmnet)
 library(suquan)
 set.seed(1234)
-mc.cores <- 5
+mc.cores <- 6
 
 # Download some data
 source("https://bioconductor.org/biocLite.R")
@@ -34,7 +34,7 @@ n <- nrow(x)
 p <- ncol(x)
 
 # Make train/test splits
-nrepeats <- 5
+nrepeats <- 10
 nfolds <- 3
 folds <- list()
 for (i in seq(nrepeats)) {
@@ -42,9 +42,9 @@ for (i in seq(nrepeats)) {
 }
 nexp <- length(folds)
 
-lambda <- 5^{-10:2}
+lambda <- 1.5^{-10:20}/(p*n*(nfolds-1)/nfolds)
 nlambda <- length(lambda)
-niter <- 5
+niter <- 2
 
 # Main loop (done in parallel on several cores)
 auc <- mclapply(seq(nexp), function(iexp){
@@ -74,7 +74,9 @@ mc.cores=mc.cores)
 
 # Pretty plot
 mauc <- apply(array(unlist(auc), dim = c(nrow(auc[[1]]), ncol(auc[[1]]), length(auc))), c(1,2), mean)
-matplot(mauc, type="l", lty=1, lwd=2, ylab="AUC",xlab="log(lambda)")
-legend("bottomleft", legend=seq(niter), col=seq(niter), lty=1, lwd=2)
+pdf("auc.pdf", width=5, height=5)
+matplot(log(lambda), mauc, type="l", lty=1, lwd=2, ylab="AUC",xlab="log(lambda)")
+legend("topright", legend=c("Gaussian", "SUQUAN"), col=seq(niter), lty=1, lwd=2)
+dev.off()
 ```
 Unfortunately it does not seem to help to learn the quantile function in this case. Perhaps a "fausse bonne idée"?
