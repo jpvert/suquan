@@ -75,7 +75,7 @@ mc.cores=mc.cores)
 # Pretty plot
 mauc <- apply(array(unlist(auc), dim = c(nrow(auc[[1]]), ncol(auc[[1]]), length(auc))), c(1,2), mean)
 pdf("auc.pdf", width=5, height=5)
-matplot(log(lambda), mauc, type="l", lty=1, lwd=2, ylab="AUC",xlab="log(lambda)")
+matplot(log(lambda), mauc, type="l", lty=1, lwd=2, main="Breast cancer 10-year metastasis prognosis", ylab="AUC",xlab="log(lambda)")
 legend("topright", legend=c("Gaussian", "SUQUAN"), col=seq(niter), lty=1, lwd=2)
 dev.off()
 ```
