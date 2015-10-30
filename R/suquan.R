@@ -65,7 +65,7 @@ suquan <- function(x, y, family=c("gaussian", "binomial"), penalty="elasticnet",
         f_old <- f
 
         # Optimize model (b,a0) for a fixed quantile function f
-        newx <- matrix(f[orderx],nrow=n)
+        newx <- matrix(f[rankx],nrow=n)
         if (use.glmnet) {
             mm <- glmnet(newx, y, family=family, intercept=intercept, standardize=FALSE, lambda=lambda, alpha=opts[["alpha"]])
             m <- list(b=coef(mm)[-1,], a0=coef(mm)[1,])
@@ -76,7 +76,7 @@ suquan <- function(x, y, family=c("gaussian", "binomial"), penalty="elasticnet",
 
         # Optimize quantile function f for fixed model b
         if (iter < maxiter) {
-            newx <- matrix(m[["b"]][rankx],nrow=n)
+            newx <- matrix(m[["b"]][orderx],nrow=n)
             m2 <- glm.apg(newx, y, family=family, penalty="boundednondecreasing", intercept=intercept, opts=opts)
             f <- m2[["b"]]
         }
