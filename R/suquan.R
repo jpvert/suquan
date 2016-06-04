@@ -55,7 +55,7 @@ suquan <- function(x, y, family=c("gaussian", "binomial"), penalty="elasticnet",
     }
     
     # Sort samples
-    rankx <- t(apply(x,1,rank))
+    rankx <- t(apply(x,1, function(v){rank(v, na.last=NA, ties.method='first')}))
     orderx <- t(apply(rankx, 1, function(v) {match(seq(p),v)}))
     
     # Main loop
@@ -71,17 +71,24 @@ suquan <- function(x, y, family=c("gaussian", "binomial"), penalty="elasticnet",
             m <- list(b=coef(mm)[-1,], a0=coef(mm)[1,])
             
         } else {
+            if (iter >= 2){
+                opts$X_INIT <- m[['b']] 
+            }
             m <- glm.apg(newx, y, family=family, penalty=penalty, intercept=intercept, lambda=lambda, opts=opts)
         }
 
         # Optimize quantile function f for fixed model b
         if (iter < maxiter) {
             newx <- matrix(m[["b"]][orderx],nrow=n)
+            if (iter >= 2){
+                opts$X_INIT <- c(m2[['b']], m2[['a0']])
+            }
             m2 <- glm.apg(newx, y, family=family, penalty="boundednondecreasing", intercept=intercept, opts=opts)
             f <- m2[["b"]]
         }
         
         if (sqrt(sum((f-f_old)^2)) < eps) break
+        if (sum(f == mean(f)) == length(f)) break
     }
     
     return(list(f=f_old, b=m[["b"]], a0=m[["a0"]]))
